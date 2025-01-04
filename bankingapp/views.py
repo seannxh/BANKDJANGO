@@ -36,6 +36,18 @@ class SignUpView(APIView):
 
         return Response({"message": "User and bank account created successfully"}, status=status.HTTP_201_CREATED)
 
+
+class SignOutView(APIView):
+    def post(self, request):
+        try:
+            refresh_token = request.data.get("refresh_token")
+            token = RefreshToken(refresh_token)
+            token.blacklist()  # Invalidate the refresh token
+            return Response({"message": "Signout successful"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 # Sign-in View
 class SignInView(APIView):
     permission_classes = [AllowAny]
