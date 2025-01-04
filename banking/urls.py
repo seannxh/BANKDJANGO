@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from bankingapp.viewsets import CustomerViewSet, BankAccountViewSet, TransactionViewSet
-from bankingapp.views import SignUpView, SignInView, UserBankAccountsView, SendMoneyView, DepositMoneyView, CreateBankAccountView, UpdateBalanceView
+from bankingapp.views import SignUpView, SignInView, UserBankAccountsView, SendMoneyView, DepositMoneyView, CreateBankAccountView, UpdateBalanceView, DeleteBankAccountView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.http import HttpResponse
 
@@ -30,4 +30,5 @@ urlpatterns = [
     path("api/deposit-money/", DepositMoneyView.as_view(), name="deposit-money"),
     path("api/create-bank-account/", CreateBankAccountView.as_view(), name="create-bank-account"),
     path('api/update-balance/<str:account_id>/', UpdateBalanceView.as_view(), name='update-balance'),
+      path('api/delete-bank-account/<str:account_id>/', DeleteBankAccountView.as_view(), name='delete-bank-account'),
 ]

@@ -207,7 +207,19 @@ class UpdateBalanceView(APIView):
             }
         }, status=status.HTTP_200_OK)
 
+from .models import BankAccount
 
+class DeleteBankAccountView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, account_id):
+        try:
+            account = BankAccount.objects.get(account_number=account_id, user=request.user)
+        except BankAccount.DoesNotExist:
+            return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        account.delete()
+        return Response({"message": "Bank account deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
 # Protected Data View
 class ProtectedDataView(APIView):
     permission_classes = [IsAuthenticated]
