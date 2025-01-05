@@ -134,6 +134,7 @@ class SendMoneyView(APIView):
         return Response({"message": "Transaction successful"}, status=status.HTTP_200_OK)
 
 # Deposit Money View
+# In your deposit view
 class DepositMoneyView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -141,37 +142,29 @@ class DepositMoneyView(APIView):
         account_number = request.data.get("account_number")
         amount = request.data.get("amount")
 
-        if not account_number or not amount:
-            return Response({"error": "Account number and amount are required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            amount = Decimal(amount)
-            if amount <= 0:
-                raise ValueError
-        except ValueError:
-            return Response({"error": "Invalid amount"}, status=status.HTTP_400_BAD_REQUEST)
-
         try:
             account = BankAccount.objects.get(account_number=account_number, user=request.user)
+            
+            with Transaction.atomic():
+                # Update balance
+                account.balance += Decimal(amount)
+                account.save()
+
+                # Create transaction record (note sender is null for deposits)
+                Transaction.objects.create(
+                    sender=None,  # This will make sender_account null in the API
+                    receiver=account,
+                    amount=amount
+                )
+
+            return Response({
+                "message": "Deposit successful",
+                "new_balance": account.balance
+            })
         except BankAccount.DoesNotExist:
-            return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        with db_transaction.atomic():
-            account.balance += amount
-            account.save()
-
-            # Create transaction record for deposit
-            Transaction.objects.create(
-                sender=None,  # null sender for deposits
-                receiver=account,
-                amount=amount
-            )
-
-        return Response({
-            "message": "Deposit successful",
-            "account_number": account.account_number,
-            "new_balance": account.balance
-        }, status=status.HTTP_200_OK)
+            return Response({"error": "Account not found"}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
     
 # Create Bank Account View
 class CreateBankAccountView(APIView):

@@ -18,13 +18,13 @@ class BankAccount(models.Model):
 
 
 class Transaction(models.Model):
-    sender = models.ForeignKey(BankAccount, related_name='sent_transactions', on_delete=models.CASCADE, null=True)
-    receiver = models.ForeignKey(BankAccount, related_name='received_transactions', on_delete=models.CASCADE, null=True)
+    sender = models.ForeignKey(BankAccount, on_delete=models.CASCADE, related_name='sent_transactions', null=True)
+    receiver = models.ForeignKey(BankAccount, on_delete=models.CASCADE, related_name='received_transactions')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Transaction from {self.sender.account_number} to {self.receiver.account_number}"
+        return f"Transaction {self.account_number}: {self.amount}"
 
 class Customer(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="customer_profile")
