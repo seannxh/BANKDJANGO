@@ -6,6 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from django.db import transaction as db_transaction
+from django.db import transaction
 from decimal import Decimal
 from .models import BankAccount, Transaction
 
@@ -145,7 +146,7 @@ class DepositMoneyView(APIView):
         try:
             account = BankAccount.objects.get(account_number=account_number, user=request.user)
             
-            with Transaction.atomic():
+            with transaction.atomic():
                 # Update balance
                 account.balance += Decimal(amount)
                 account.save()
