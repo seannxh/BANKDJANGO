@@ -19,12 +19,13 @@ class TransactionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        account_number = self.kwargs.get('accountNumber')  # Fetch accountNumber from URL
+        account_number = self.kwargs.get('accountNumber')
         if account_number:
-            # Fetch transactions where the account is either the sender or the receiver
-            return Transaction.objects.filter(
+            queryset = Transaction.objects.filter(
                 sender__account_number=account_number
             ) | Transaction.objects.filter(
                 receiver__account_number=account_number
             )
+            print(f"Queryset for account {account_number}: {queryset}")  # Debugging
+            return queryset
         return super().get_queryset()
