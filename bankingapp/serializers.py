@@ -12,6 +12,9 @@ class BankAccountSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class TransactionSerializer(serializers.ModelSerializer):
+    sender_account = serializers.CharField(source='sender.account_number')
+    receiver_account = serializers.CharField(source='receiver.account_number')
+
     class Meta:
         model = Transaction
         fields = '__all__'
