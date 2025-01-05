@@ -2,6 +2,8 @@ from rest_framework import viewsets
 from .models import Customer, BankAccount, Transaction
 from .serializers import CustomerSerializer, BankAccountSerializer, TransactionSerializer
 from rest_framework.permissions import IsAuthenticated
+from django.db.models import Q
+
 
 class CustomerViewSet(viewsets.ModelViewSet):
     queryset = Customer.objects.all()
@@ -14,18 +16,14 @@ class BankAccountViewSet(viewsets.ModelViewSet):
 
 
 class TransactionViewSet(viewsets.ModelViewSet):
-    queryset = Transaction.objects.all()
     serializer_class = TransactionSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         account_number = self.kwargs.get('accountNumber')
         if account_number:
-            queryset = Transaction.objects.filter(
-                sender__account_number=account_number
-            ) | Transaction.objects.filter(
-                receiver__account_number=account_number
-            )
-            print(f"Queryset for account {account_number}: {queryset}")  # Debugging
-            return queryset
-        return super().get_queryset()
+            return Transaction.objects.filter(
+                Q(sender__account_number=account_number) |
+                Q(receiver__account_number=account_number)
+            ).select_related('sender', 'receiver').order_by('-timestamp')
+        return Transaction.objects.none()

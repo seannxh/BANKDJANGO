@@ -156,15 +156,23 @@ class DepositMoneyView(APIView):
         except BankAccount.DoesNotExist:
             return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        account.balance += amount
-        account.save()
+        with db_transaction.atomic():
+            account.balance += amount
+            account.save()
+
+            # Create transaction record for deposit
+            Transaction.objects.create(
+                sender=None,  # null sender for deposits
+                receiver=account,
+                amount=amount
+            )
 
         return Response({
             "message": "Deposit successful",
             "account_number": account.account_number,
             "new_balance": account.balance
         }, status=status.HTTP_200_OK)
-
+    
 # Create Bank Account View
 class CreateBankAccountView(APIView):
     permission_classes = [IsAuthenticated]
@@ -193,8 +201,8 @@ class CreateBankAccountView(APIView):
         return Response({
             "message": "Bank account created successfully.",
             "account_details": {
-                "account_number": account.account_number,
                 "account_type": account.account_type,
+                "account_number": account.account_number,
                 "balance": account.balance,
             },
         }, status=status.HTTP_201_CREATED)
@@ -238,6 +246,7 @@ class DeleteBankAccountView(APIView):
         account.delete()
         return Response({"message": "Bank account deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
 # Protected Data View
+
 class ProtectedDataView(APIView):
     permission_classes = [IsAuthenticated]
 
