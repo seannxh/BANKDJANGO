@@ -17,7 +17,11 @@ class TransactionViewSet(viewsets.ModelViewSet):
     serializer_class = TransactionSerializer
 
     def get_queryset(self):
-        account_id = self.request.query_params.get('account_id')
+        account_id = self.kwargs.get('account_id')
+        account_number = self.kwargs.get('account_number')
+
         if account_id:
-            return Transaction.objects.filter(account_id=account_id)
+            return Transaction.objects.filter(account__id=account_id)
+        elif account_number:
+            return Transaction.objects.filter(account__account_number=account_number)
         return super().get_queryset()
