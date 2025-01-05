@@ -31,6 +31,6 @@ urlpatterns = [
     path("api/create-bank-account/", CreateBankAccountView.as_view(), name="create-bank-account"),
     path('api/update-balance/<str:account_id>/', UpdateBalanceView.as_view(), name='update-balance'),
     path('api/delete-bank-account/<str:account_id>/', DeleteBankAccountView.as_view(), name='delete-bank-account'),
-    path('api/accounts/<int:account_number>/transactions/', TransactionViewSet.as_view({'get': 'list'}), name='account-transactions'),
+    path('api/accounts/<str:account_id>/transactions/', TransactionViewSet.as_view({'get': 'list'}), name='account-transactions'),
     path("api/signout/", SignOutView.as_view(), name="signout"),
 ]
