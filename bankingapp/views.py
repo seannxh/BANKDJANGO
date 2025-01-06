@@ -189,16 +189,18 @@ class WithdrawMoneyView(APIView):
         account_number = request.data.get("account_number")
         amount = request.data.get("amount")
 
+        if not account_number or not amount:
+            return Response({"error": "Account number and amount are required."}, status=400)
+
         try:
             account = BankAccount.objects.get(account_number=account_number, user=request.user)
             if account.balance < Decimal(amount):
                 return Response({"error": "Insufficient funds"}, status=400)
 
-            with db_transaction.atomic():
+            with transaction.atomic():
                 account.balance -= Decimal(amount)
                 account.save()
 
-                # Create transaction record with type "WITHDRAW"
                 Transaction.objects.create(
                     sender=account,
                     receiver=None,
@@ -211,6 +213,7 @@ class WithdrawMoneyView(APIView):
             return Response({"error": "Account not found"}, status=404)
         except Exception as e:
             return Response({"error": str(e)}, status=400)
+
 
 
     
