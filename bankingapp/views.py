@@ -190,39 +190,26 @@ class WithdrawMoneyView(APIView):
         amount = request.data.get("amount")
 
         try:
-            # Validate amount
-            if not amount or Decimal(amount) <= 0:
-                return Response({"error": "Invalid amount. Must be greater than zero."}, status=status.HTTP_400_BAD_REQUEST)
-
-            # Fetch the account
             account = BankAccount.objects.get(account_number=account_number, user=request.user)
-            
-            # Check for sufficient balance
             if account.balance < Decimal(amount):
-                return Response({"error": "Insufficient balance."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "Insufficient funds"}, status=400)
 
-            # Perform the withdrawal
             with transaction.atomic():
                 account.balance -= Decimal(amount)
                 account.save()
+
                 Transaction.objects.create(
                     sender=account,
-                    receiver=None,  # No receiver for a withdrawal
-                    amount=Decimal(amount),
-                    transaction_type="WITHDRAW"
+                    receiver=None,
+                    amount=amount,
+                    transaction_type="WITHDRAWAL"
                 )
 
-            return Response({
-                "message": "Withdraw successful",
-                "new_balance": account.balance
-            }, status=status.HTTP_200_OK)
-
+            return Response({"message": "Withdrawal successful", "new_balance": account.balance})
         except BankAccount.DoesNotExist:
-            return Response({"error": "Account not found."}, status=status.HTTP_404_NOT_FOUND)
-        except ValueError:
-            return Response({"error": "Invalid amount format."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Account not found"}, status=404)
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": str(e)}, status=400)
 
 
     
