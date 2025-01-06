@@ -122,42 +122,34 @@ class SendMoneyView(APIView):
         receiver_account_number = request.data.get("receiver_account")
         amount = request.data.get("amount")
 
-        if not sender_account_number or not receiver_account_number or not amount:
-            return Response({"error": "All fields are required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            amount = Decimal(amount)
-            if amount <= 0:
-                raise ValueError
-        except ValueError:
-            return Response({"error": "Invalid amount"}, status=status.HTTP_400_BAD_REQUEST)
-
         try:
             sender_account = BankAccount.objects.get(account_number=sender_account_number, user=request.user)
             receiver_account = BankAccount.objects.get(account_number=receiver_account_number)
+
+            if sender_account.balance < Decimal(amount):
+                return Response({"error": "Insufficient balance"}, status=400)
+
+            with db_transaction.atomic():
+                sender_account.balance -= Decimal(amount)
+                sender_account.save()
+
+                receiver_account.balance += Decimal(amount)
+                receiver_account.save()
+
+                # Create transaction record with type "TRANSFER"
+                Transaction.objects.create(
+                    sender=sender_account,
+                    receiver=receiver_account,
+                    amount=amount,
+                    transaction_type="TRANSFER"
+                )
+
+            return Response({"message": "Transfer successful"})
         except BankAccount.DoesNotExist:
-            return Response({"error": "Invalid account number"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Invalid account number"}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
 
-        if sender_account_number == receiver_account_number:
-            return Response({"error": "Cannot send money to the same account"}, status=status.HTTP_400_BAD_REQUEST)
-
-        if sender_account.user == receiver_account.user:
-            if sender_account.account_type == receiver_account.account_type:
-                return Response({"error": "Cannot transfer money between accounts of the same type for the same user"}, status=status.HTTP_400_BAD_REQUEST)
-
-        if sender_account.balance < amount:
-            return Response({"error": "Insufficient balance"}, status=status.HTTP_400_BAD_REQUEST)
-
-        with db_transaction.atomic():
-            sender_account.balance -= amount
-            sender_account.save()
-
-            receiver_account.balance += amount
-            receiver_account.save()
-
-            Transaction.objects.create(sender=sender_account, receiver=receiver_account, amount=amount)
-
-        return Response({"message": "Transaction successful"}, status=status.HTTP_200_OK)
 
 # Deposit
 class DepositMoneyView(APIView):
@@ -169,21 +161,19 @@ class DepositMoneyView(APIView):
 
         try:
             account = BankAccount.objects.get(account_number=account_number, user=request.user)
-            
-            with transaction.atomic():
-                # Update balance
+            with db_transaction.atomic():
                 account.balance += Decimal(amount)
                 account.save()
+
+                # Create transaction record with type "DEPOSIT"
                 Transaction.objects.create(
-                    sender=None, 
+                    sender=None,
                     receiver=account,
-                    amount=amount
+                    amount=amount,
+                    transaction_type="DEPOSIT"
                 )
 
-            return Response({
-                "message": "Deposit successful",
-                "new_balance": account.balance
-            })
+            return Response({"message": "Deposit successful", "new_balance": account.balance})
         except BankAccount.DoesNotExist:
             return Response({"error": "Account not found"}, status=404)
         except Exception as e:
@@ -201,28 +191,27 @@ class WithdrawMoneyView(APIView):
 
         try:
             account = BankAccount.objects.get(account_number=account_number, user=request.user)
-            
             if account.balance < Decimal(amount):
-                return Response({"error": "Insufficient balance."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "Insufficient funds"}, status=400)
 
-            with transaction.atomic():
+            with db_transaction.atomic():
                 account.balance -= Decimal(amount)
                 account.save()
+
+                # Create transaction record with type "WITHDRAW"
                 Transaction.objects.create(
-                    sender=None,  
-                    receiver=account,
-                    amount=Decimal(amount)
+                    sender=account,
+                    receiver=None,
+                    amount=amount,
+                    transaction_type="WITHDRAW"
                 )
 
-            return Response({
-                "message": "Withdraw successful",
-                "new_balance": account.balance
-            }, status=status.HTTP_200_OK)
-
+            return Response({"message": "Withdrawal successful", "new_balance": account.balance})
         except BankAccount.DoesNotExist:
-            return Response({"error": "Account not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Account not found"}, status=404)
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": str(e)}, status=400)
+
 
     
 #Account View
