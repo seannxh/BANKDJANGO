@@ -17,4 +17,4 @@ class TransactionSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Transaction
-        fields = ['id', 'sender_account', 'receiver_account', 'amount', 'timestamp']
+        fields = ['id', 'sender', 'receiver', 'amount', 'timestamp', 'transaction_type']
