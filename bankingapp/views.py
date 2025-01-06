@@ -170,36 +170,53 @@ class DepositMoneyView(APIView):
 # Create Bank Account View
 class CreateBankAccountView(APIView):
     permission_classes = [IsAuthenticated]
+    MAX_ACCOUNTS_PER_USER = 3  # Set the limit here
 
     def post(self, request):
         account_type = request.data.get("account_type")
         initial_balance = request.data.get("initial_balance", 0)
 
         if account_type not in ["CHECKING", "SAVINGS"]:
-            return Response({"error": "Invalid account type. Must be 'CHECKING' or 'SAVINGS'."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Invalid account type. Must be 'CHECKING' or 'SAVINGS'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             initial_balance = float(initial_balance)
             if initial_balance < 0:
                 raise ValueError
         except ValueError:
-            return Response({"error": "Initial balance must be a non-negative number."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Initial balance must be a non-negative number."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user_account_count = BankAccount.objects.filter(user=request.user).count()
+        if user_account_count >= self.MAX_ACCOUNTS_PER_USER:
+            return Response(
+                {"error": f"Sorry, We limit 3 Accounts per User."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         account = BankAccount.objects.create(
             user=request.user,
-            account_number=f"ACC-{request.user.id}-{len(BankAccount.objects.filter(user=request.user)) + 1}",
+            account_number=f"ACC-{request.user.id}-{user_account_count + 1}",
             account_type=account_type,
-            balance=initial_balance
+            balance=initial_balance,
         )
 
-        return Response({
-            "message": "Bank account created successfully.",
-            "account_details": {
-                "account_type": account.account_type,
-                "account_number": account.account_number,
-                "balance": account.balance,
+        return Response(
+            {
+                "message": "Bank account created successfully.",
+                "account_details": {
+                    "account_type": account.account_type,
+                    "account_number": account.account_number,
+                    "balance": account.balance,
+                },
             },
-        }, status=status.HTTP_201_CREATED)
+            status=status.HTTP_201_CREATED,
+        )
 
 class UpdateBalanceView(APIView):
     permission_classes = [IsAuthenticated]
