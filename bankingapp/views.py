@@ -199,9 +199,9 @@ class WithdrawMoneyView(APIView):
                 account.save()
 
                 Transaction.objects.create(
-                    sender=account,
-                    receiver=None,
-                    amount=amount,
+                    sender=None,
+                    receiver=account,
+                    amount=Decimal(amount),
                     transaction_type="WITHDRAWAL"
                 )
 
