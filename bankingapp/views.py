@@ -169,7 +169,7 @@ class DepositMoneyView(APIView):
                 Transaction.objects.create(
                     sender=None,
                     receiver=account,
-                    amount=amount,
+                    amount=Decimal(amount),
                     transaction_type="DEPOSIT"
                 )
 
