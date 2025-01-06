@@ -249,8 +249,4 @@ class DeleteBankAccountView(APIView):
         return Response({"message": "Bank account deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
 # Protected Data View
 
-class ProtectedDataView(APIView):
-    permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        return Response({"message": "This is protected data!"})

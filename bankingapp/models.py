@@ -16,7 +16,6 @@ class BankAccount(models.Model):
     def __str__(self):
         return f"{self.account_number} - {self.user.username}"
 
-
 class Transaction(models.Model):
     sender = models.ForeignKey(BankAccount, on_delete=models.CASCADE, related_name='sent_transactions', null=True)
     receiver = models.ForeignKey(BankAccount, on_delete=models.CASCADE, related_name='received_transactions')
