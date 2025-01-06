@@ -55,6 +55,47 @@ class SignInView(APIView):
         else:
             return Response({"error": "Invalid credentials"}, status=401)
         
+class SignOutView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            refresh_token = request.data.get("refresh_token")
+            if not refresh_token:
+                return Response({"error": "Refresh token is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response({"message": "Signout successful"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class UpdateBalanceView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, account_id):
+        try:
+            account = BankAccount.objects.get(account_number=account_id, user=request.user)
+        except BankAccount.DoesNotExist:
+            return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        new_balance = request.data.get("balance")
+        if new_balance is None or new_balance < 0:
+            return Response({"error": "Invalid balance amount"}, status=status.HTTP_400_BAD_REQUEST)
+
+        account.balance = new_balance
+        account.save()
+
+        return Response({
+            "message": "Balance updated successfully",
+            "account": {
+                "account_number": account.account_number,
+                "balance": account.balance,
+                "account_type": account.account_type,
+            }
+        }, status=status.HTTP_200_OK)
+
+from .models import BankAccount 
 
 # Get
 class UserBankAccountsView(APIView):
