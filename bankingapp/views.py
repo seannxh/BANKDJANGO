@@ -10,7 +10,7 @@ from django.db import transaction
 from decimal import Decimal
 from .models import BankAccount, Transaction
 
-# Sign-up View
+# Signup
 class SignUpView(APIView):
     permission_classes = [AllowAny]
 
@@ -37,24 +37,7 @@ class SignUpView(APIView):
 
         return Response({"message": "User and bank account created successfully"}, status=status.HTTP_201_CREATED)
 
-class SignOutView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        try:
-            refresh_token = request.data.get("refresh_token")
-            if not refresh_token:
-                return Response({"error": "Refresh token is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-            return Response({"message": "Signout successful"}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-# Sign-in View
+# Signin
 class SignInView(APIView):
     permission_classes = [AllowAny]
 
@@ -72,7 +55,7 @@ class SignInView(APIView):
         else:
             return Response({"error": "Invalid credentials"}, status=401)
 
-# Get User's Bank Accounts
+# Get
 class UserBankAccountsView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -88,7 +71,7 @@ class UserBankAccountsView(APIView):
         ]
         return Response(account_data, status=status.HTTP_200_OK)
 
-# Send Money Between Accounts
+# Send
 class SendMoneyView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -134,8 +117,7 @@ class SendMoneyView(APIView):
 
         return Response({"message": "Transaction successful"}, status=status.HTTP_200_OK)
 
-# Deposit Money View
-# In your deposit view
+# Deposit
 class DepositMoneyView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -150,10 +132,8 @@ class DepositMoneyView(APIView):
                 # Update balance
                 account.balance += Decimal(amount)
                 account.save()
-
-                # Create transaction record (note sender is null for deposits)
                 Transaction.objects.create(
-                    sender=None,  # This will make sender_account null in the API
+                    sender=None, 
                     receiver=account,
                     amount=amount
                 )
@@ -166,11 +146,47 @@ class DepositMoneyView(APIView):
             return Response({"error": "Account not found"}, status=404)
         except Exception as e:
             return Response({"error": str(e)}, status=400)
+        
+from rest_framework import status
+
+#Withdraw
+class WithdrawMoneyView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        account_number = request.data.get("account_number")
+        amount = request.data.get("amount")
+
+        try:
+            account = BankAccount.objects.get(account_number=account_number, user=request.user)
+            
+            if account.balance < Decimal(amount):
+                return Response({"error": "Insufficient balance."}, status=status.HTTP_400_BAD_REQUEST)
+
+            with transaction.atomic():
+                account.balance -= Decimal(amount)
+                account.save()
+                Transaction.objects.create(
+                    sender=None,  
+                    receiver=account,
+                    amount=Decimal(amount)
+                )
+
+            return Response({
+                "message": "Withdraw successful",
+                "new_balance": account.balance
+            }, status=status.HTTP_200_OK)
+
+        except BankAccount.DoesNotExist:
+            return Response({"error": "Account not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
     
-# Create Bank Account View
+#Account View
 class CreateBankAccountView(APIView):
     permission_classes = [IsAuthenticated]
-    MAX_ACCOUNTS_PER_USER = 3  # Set the limit here
+    MAX_ACCOUNTS_PER_USER = 3
 
     def post(self, request):
         account_type = request.data.get("account_type")
@@ -218,33 +234,8 @@ class CreateBankAccountView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
-class UpdateBalanceView(APIView):
-    permission_classes = [IsAuthenticated]
 
-    def patch(self, request, account_id):
-        try:
-            account = BankAccount.objects.get(account_number=account_id, user=request.user)
-        except BankAccount.DoesNotExist:
-            return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        new_balance = request.data.get("balance")
-        if new_balance is None or new_balance < 0:
-            return Response({"error": "Invalid balance amount"}, status=status.HTTP_400_BAD_REQUEST)
-
-        account.balance = new_balance
-        account.save()
-
-        return Response({
-            "message": "Balance updated successfully",
-            "account": {
-                "account_number": account.account_number,
-                "balance": account.balance,
-                "account_type": account.account_type,
-            }
-        }, status=status.HTTP_200_OK)
-
-from .models import BankAccount
-
+#Delete
 class DeleteBankAccountView(APIView):
     permission_classes = [IsAuthenticated]
 
