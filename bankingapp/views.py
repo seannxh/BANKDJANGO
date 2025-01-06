@@ -55,48 +55,6 @@ class SignInView(APIView):
         else:
             return Response({"error": "Invalid credentials"}, status=401)
         
-class SignOutView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        try:
-            refresh_token = request.data.get("refresh_token")
-            if not refresh_token:
-                return Response({"error": "Refresh token is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-            return Response({"message": "Signout successful"}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-class UpdateBalanceView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def patch(self, request, account_id):
-        try:
-            account = BankAccount.objects.get(account_number=account_id, user=request.user)
-        except BankAccount.DoesNotExist:
-            return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        new_balance = request.data.get("balance")
-        if new_balance is None or new_balance < 0:
-            return Response({"error": "Invalid balance amount"}, status=status.HTTP_400_BAD_REQUEST)
-
-        account.balance = new_balance
-        account.save()
-
-        return Response({
-            "message": "Balance updated successfully",
-            "account": {
-                "account_number": account.account_number,
-                "balance": account.balance,
-                "account_type": account.account_type,
-            }
-        }, status=status.HTTP_200_OK)
-
-from .models import BankAccount
-
 
 # Get
 class UserBankAccountsView(APIView):
@@ -161,7 +119,6 @@ class SendMoneyView(APIView):
         return Response({"message": "Transaction successful"}, status=status.HTTP_200_OK)
 
 # Deposit
-
 class DepositMoneyView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -171,34 +128,29 @@ class DepositMoneyView(APIView):
 
         try:
             account = BankAccount.objects.get(account_number=account_number, user=request.user)
+            
             with transaction.atomic():
+                # Update balance
                 account.balance += Decimal(amount)
                 account.save()
-
-                # Create transaction record with type "DEPOSIT"
                 Transaction.objects.create(
-                    sender=None,  # No sender for deposit
+                    sender=None, 
                     receiver=account,
-                    amount=amount,
-                    transaction_type="DEPOSIT"
+                    amount=amount
                 )
 
-            return Response({"message": "Deposit successful", "new_balance": account.balance})
+            return Response({
+                "message": "Deposit successful",
+                "new_balance": account.balance
+            })
         except BankAccount.DoesNotExist:
             return Response({"error": "Account not found"}, status=404)
         except Exception as e:
             return Response({"error": str(e)}, status=400)
-
         
 from rest_framework import status
 
 #Withdraw
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from decimal import Decimal
-from .models import BankAccount, Transaction
-
 class WithdrawMoneyView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -208,27 +160,28 @@ class WithdrawMoneyView(APIView):
 
         try:
             account = BankAccount.objects.get(account_number=account_number, user=request.user)
+            
             if account.balance < Decimal(amount):
-                return Response({"error": "Insufficient funds"}, status=400)
+                return Response({"error": "Insufficient balance."}, status=status.HTTP_400_BAD_REQUEST)
 
             with transaction.atomic():
                 account.balance -= Decimal(amount)
                 account.save()
-
-                # Create transaction record with type "WITHDRAWAL"
                 Transaction.objects.create(
-                    sender=account,
-                    receiver=None,  # No receiver for withdrawal
-                    amount=amount,
-                    transaction_type="WITHDRAWAL"
+                    sender=None,  
+                    receiver=account,
+                    amount=Decimal(amount)
                 )
 
-            return Response({"message": "Withdrawal successful", "new_balance": account.balance})
-        except BankAccount.DoesNotExist:
-            return Response({"error": "Account not found"}, status=404)
-        except Exception as e:
-            return Response({"error": str(e)}, status=400)
+            return Response({
+                "message": "Withdraw successful",
+                "new_balance": account.balance
+            }, status=status.HTTP_200_OK)
 
+        except BankAccount.DoesNotExist:
+            return Response({"error": "Account not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     
 #Account View
