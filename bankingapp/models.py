@@ -21,7 +21,7 @@ class BankAccount(models.Model):
 class Transaction(models.Model):
     TRANSACTION_TYPES = [
         ('DEPOSIT', 'Deposit'),
-        ('WITHDRAW', 'Withdraw'),
+        ('WITHDRAWAL', 'Withdraw'),
         ('TRANSFER', 'Transfer'),
     ]
 
