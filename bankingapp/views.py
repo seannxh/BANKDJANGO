@@ -112,6 +112,63 @@ class UserBankAccountsView(APIView):
             for acc in accounts
         ]
         return Response(account_data, status=status.HTTP_200_OK)
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status, permissions
+from django.db import transaction as db_transaction
+from decimal import Decimal
+from .models import BankAccount, Transaction
+
+class TransferView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        """
+        Transfer money between two accounts.
+        """
+        sender_account_number = request.data.get("sender_account")
+        receiver_account_number = request.data.get("receiver_account")
+        amount = request.data.get("amount")
+
+        if not sender_account_number or not receiver_account_number or not amount:
+            return Response({"error": "All fields (sender_account, receiver_account, amount) are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            amount = Decimal(amount)
+            if amount <= 0:
+                return Response({"error": "Amount must be greater than zero."}, status=status.HTTP_400_BAD_REQUEST)
+        except:
+            return Response({"error": "Invalid amount."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            sender_account = BankAccount.objects.get(account_number=sender_account_number, customer__user=request.user)
+            receiver_account = BankAccount.objects.get(account_number=receiver_account_number)
+
+            if sender_account.balance < amount:
+                return Response({"error": "Insufficient balance in sender's account."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Perform the transfer atomically
+            with db_transaction.atomic():
+                sender_account.balance -= amount
+                sender_account.save()
+
+                receiver_account.balance += amount
+                receiver_account.save()
+
+                # Record the transaction
+                Transaction.objects.create(
+                    sender=sender_account,
+                    receiver=receiver_account,
+                    amount=amount,
+                    transaction_type=Transaction.TransactionType.TRANSFER
+                )
+
+            return Response({"message": "Transfer successful."}, status=status.HTTP_200_OK)
+
+        except BankAccount.DoesNotExist:
+            return Response({"error": "Invalid sender or receiver account."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Send
 class SendMoneyView(APIView):

@@ -23,22 +23,26 @@ class Transaction(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="sent_transactions"
+        related_name="sent_transactions",
+        help_text="The account sending money. Null for deposits."
     )
     receiver = models.ForeignKey(
         'BankAccount',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="received_transactions"
+        related_name="received_transactions",
+        help_text="The account receiving money. Null for withdrawals."
     )
     transaction_type = models.CharField(
         max_length=10,
-        choices=TransactionType.choices
+        choices=TransactionType.choices,
+        help_text="Type of transaction: Deposit, Withdrawal, or Transfer."
     )
     amount = models.DecimalField(
         max_digits=12,
-        decimal_places=2
+        decimal_places=2,
+        help_text="The amount of money involved in the transaction."
     )
     description = models.TextField(
         blank=True,
@@ -58,7 +62,7 @@ class Transaction(models.Model):
 
     def clean(self):
         """
-        Custom validation to ensure the amount is positive.
+        Ensure the transaction amount is positive.
         """
         if self.amount <= 0:
             raise ValidationError("Transaction amount must be greater than zero.")
@@ -71,7 +75,7 @@ class Transaction(models.Model):
             f"Receiver: {self.receiver} | "
             f"Date: {self.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
         )
-
+        
 
 class Customer(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="customer_profile")
