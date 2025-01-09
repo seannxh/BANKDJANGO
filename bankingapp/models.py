@@ -13,14 +13,16 @@ class BankAccount(models.Model):
 
 
 class Transaction(models.Model):
-    sender = models.ForeignKey(BankAccount, on_delete=models.SET_NULL, related_name="sent_transactions", null=True, blank=True)
-    receiver = models.ForeignKey(BankAccount, on_delete=models.SET_NULL, related_name="received_transactions", null=True, blank=True)
+    TRANSACTION_TYPE_CHOICES = [("DEPOSIT", "Deposit"), ("WITHDRAWAL", "Withdrawal"), ("TRANSFER", "Transfer")]
+
+    sender = models.ForeignKey(BankAccount, on_delete=models.SET_NULL, null=True, blank=True, related_name="sent_transactions")
+    receiver = models.ForeignKey(BankAccount, on_delete=models.SET_NULL, null=True, blank=True, related_name="received_transactions")
+    transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPE_CHOICES)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
-    transaction_type = models.CharField(max_length=10, choices=[("DEPOSIT", "Deposit"), ("WITHDRAWAL", "Withdrawal"), ("TRANSFER", "Transfer")])
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.transaction_type} - ${self.amount}"
+        return f"{self.transaction_type} - {self.amount}"
 
 class Customer(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="customer_profile")
