@@ -140,7 +140,7 @@ class SendMoneyView(APIView):
                 Transaction.objects.create(
                     sender=sender_account,
                     receiver=receiver_account,
-                    amount=amount,
+                    amount=Decimal(amount),
                     transaction_type="TRANSFER"
                 )
 
@@ -199,8 +199,8 @@ class WithdrawMoneyView(APIView):
                 account.save()
 
                 Transaction.objects.create(
-                    sender=None,
-                    receiver=account,
+                    sender=account,
+                    receiver=None,
                     amount=Decimal(amount),
                     transaction_type="WITHDRAWAL"
                 )

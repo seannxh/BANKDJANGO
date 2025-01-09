@@ -3,33 +3,21 @@ from django.contrib.auth.models import User
 from decimal import Decimal
 
 class BankAccount(models.Model):
-    ACCOUNT_TYPES = [
-        ('SAVINGS', 'Savings'),
-        ('CHECKING', 'Checking'),
-    ]
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="bank_accounts")
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     account_number = models.CharField(max_length=20, unique=True)
-    account_type = models.CharField(max_length=50, choices=ACCOUNT_TYPES, default='SAVINGS')
-    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    created_at = models.DateTimeField(auto_now_add=True)
+    account_type = models.CharField(max_length=10, choices=[("CHECKING", "Checking"), ("SAVINGS", "Savings")])
+    balance = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
 
     def __str__(self):
         return f"{self.account_number} - {self.user.username}"
 
 
 class Transaction(models.Model):
-    TRANSACTION_TYPES = [
-        ('DEPOSIT', 'Deposit'),
-        ('WITHDRAWAL', 'Withdraw'),
-        ('TRANSFER', 'Transfer'),
-    ]
-
-    sender = models.ForeignKey('BankAccount', related_name='sent_transactions', on_delete=models.SET_NULL, null=True, blank=True)
-    receiver = models.ForeignKey('BankAccount', related_name='received_transactions', on_delete=models.CASCADE)
-    amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
-    timestamp = models.DateTimeField(auto_now_add=True)
-    transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPES)
+    sender = models.ForeignKey(BankAccount, on_delete=models.SET_NULL, related_name="sent_transactions", null=True, blank=True)
+    receiver = models.ForeignKey(BankAccount, on_delete=models.SET_NULL, related_name="received_transactions", null=True, blank=True)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    transaction_type = models.CharField(max_length=10, choices=[("DEPOSIT", "Deposit"), ("WITHDRAWAL", "Withdrawal"), ("TRANSFER", "Transfer")])
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.transaction_type} - ${self.amount}"
