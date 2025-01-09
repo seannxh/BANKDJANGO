@@ -24,6 +24,8 @@ class TransactionViewSet(viewsets.ModelViewSet):
         if account_number:
             return Transaction.objects.filter(
                 Q(sender__account_number=account_number) |
-                Q(receiver__account_number=account_number)
+                Q(receiver__account_number=account_number) |
+                Q(receiver=None, sender__account_number=account_number) |
+                Q(sender=None, receiver__account_number=account_number)
             ).select_related('sender', 'receiver').order_by('-timestamp')
         return Transaction.objects.none()
