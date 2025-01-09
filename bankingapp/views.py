@@ -31,7 +31,7 @@ class SignUpView(APIView):
         BankAccount.objects.create(
             user=user,
             account_number=account_number,
-            account_type="SAVINGS",
+            account_type="CHECKING",
             balance=0.00,
         )
 
