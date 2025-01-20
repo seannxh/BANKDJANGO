@@ -1,8 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, permissions
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from django.db import transaction as db_transaction
@@ -112,13 +111,8 @@ class UserBankAccountsView(APIView):
             for acc in accounts
         ]
         return Response(account_data, status=status.HTTP_200_OK)
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status, permissions
-from django.db import transaction as db_transaction
-from decimal import Decimal
-from .models import BankAccount, Transaction
 
+#Transfer
 class TransferView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -193,7 +187,6 @@ class SendMoneyView(APIView):
                 receiver_account.balance += Decimal(amount)
                 receiver_account.save()
 
-                # Create transaction record with type "TRANSFER"
                 Transaction.objects.create(
                     sender=sender_account,
                     receiver=receiver_account,
@@ -222,7 +215,6 @@ class DepositMoneyView(APIView):
                 account.balance += Decimal(amount)
                 account.save()
 
-                # Create transaction record with type "DEPOSIT"
                 Transaction.objects.create(
                     sender=None,
                     receiver=account,
@@ -334,6 +326,4 @@ class DeleteBankAccountView(APIView):
 
         account.delete()
         return Response({"message": "Bank account deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
-# Protected Data View
-
 
