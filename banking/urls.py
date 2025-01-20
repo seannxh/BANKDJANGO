@@ -3,6 +3,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from bankingapp.viewsets import CustomerViewSet, BankAccountViewSet, TransactionViewSet
 from bankingapp.views import SignUpView, SignOutView, SignInView,TransferView, UserBankAccountsView, SendMoneyView, UpdateBalanceView, WithdrawMoneyView, DepositMoneyView, CreateBankAccountView, UpdateBalanceView, DeleteBankAccountView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.http import HttpResponse
 
 # Define a root response for the home page
@@ -25,6 +26,8 @@ urlpatterns = [
     path("api/user-accounts/", UserBankAccountsView.as_view(), name="user-accounts"),  # User accounts
     path("api/send-money/", SendMoneyView.as_view(), name="send-money"),  # Send money
     path("api/withdraw-money/", WithdrawMoneyView.as_view(), name="withdraw-money"),
+    path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),  # JWT access and refresh token
+    path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/deposit-money/", DepositMoneyView.as_view(), name="deposit-money"),
     path("api/create-bank-account/", CreateBankAccountView.as_view(), name="create-bank-account"),
     path('api/delete-bank-account/<str:account_id>/', DeleteBankAccountView.as_view(), name='delete-bank-account'),
